@@ -16,6 +16,10 @@ def main():
     parser.add_argument('--type', type=str, choices=['neutral', 'positive', 'negative', 'long_shot'], 
                         default='neutral',
                         help='Type of futures wheel to generate (neutral, positive, negative, or long_shot)')
+    parser.add_argument('--business', type=str, default='business_description.txt',
+                        help='Path to business description file for business relevance in final nodes')
+    parser.add_argument('--no-business', action='store_true',
+                        help='Disable business relevance even if business description file exists')
     
     # Parse arguments
     args = parser.parse_args()
@@ -86,6 +90,27 @@ def main():
     
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
+    
+    # Set final node prompt with business relevance if business description file is provided
+    if not args.no_business and os.path.exists(args.business):
+        # Load business description
+        generator.load_business_description(args.business)
+        
+        # Set final node prompt that includes business relevance
+        generator.set_final_node_prompt("""
+        Continue the train of thought for this branch: "{topic}"
+        
+        Consider the entire chain of consequences shown above, not just the most recent impact.
+        Identify {count} logical next-order impacts or consequences that would follow.
+        
+        IMPORTANT: Consider the relevance to the following business:
+        {business_description}
+        
+        Focus on how these impacts might specifically affect this business, its market, customers, 
+        operations, or strategy. Prioritize impacts with clear business relevance.
+        
+        Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
+        """)
     
     print(f"Generating {args.type} futures wheel using STEEPV framework for topic:")
     print(f'"{args.topic}"')

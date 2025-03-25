@@ -40,3 +40,6 @@ Thumbs.db
 
 # Generated PlantUML files (optional, comment out if you want to include these)
 # *.puml
+
+# Business description file (private)
+business_description.txt

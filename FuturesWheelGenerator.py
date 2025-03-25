@@ -35,6 +35,8 @@ class FuturesWheelGenerator:
         For the topic "{topic}", identify {count} potential impacts or consequences.
         Provide only the impacts as a JSON array of strings. Each impact should be concise (10 words or less).
         """
+        self.final_node_prompt = None  # Special prompt for final nodes
+        self.business_description = None  # Business description for relevance
         
         # Set wheel type and corresponding temperature
         self.wheel_type = wheel_type.lower()
@@ -102,9 +104,42 @@ class FuturesWheelGenerator:
         """
         self.default_prompt = prompt_template
     
+    def set_final_node_prompt(self, prompt: str) -> None:
+        """
+        Set a custom prompt for all final nodes (deepest level).
+        
+        Args:
+            prompt: The prompt template to use for final nodes
+        """
+        self.final_node_prompt = prompt
+    
+    def load_business_description(self, file_path: str) -> None:
+        """
+        Load business description from a file to use in final node prompts.
+        
+        Args:
+            file_path: Path to the business description file
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                self.business_description = f.read().strip()
+            print(f"Loaded business description from {file_path}")
+        except FileNotFoundError:
+            print(f"Warning: Business description file not found at {file_path}")
+            print("Creating template file for you to fill in...")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write("""# Business Description
+# Replace this text with information about your business, products, services,
+# target market, goals, and any other relevant information.
+# This information will be used to make the futures wheel more relevant to your business.
+
+""")
+            print(f"Created template file at {file_path}")
+            self.business_description = ""
+    
     def _get_prompt_for_path(self, path: List[int], depth: int, branch_text: str) -> str:
         """
-        Get the appropriate prompt template for this path, or use default.
+        Get the appropriate prompt for the given path and depth.
         
         Args:
             path: Current path in the tree
@@ -112,18 +147,30 @@ class FuturesWheelGenerator:
             branch_text: The full branch text to generate impacts for
             
         Returns:
-            Formatted prompt string
+            Prompt string
         """
-        # Check if we have a custom prompt for this path
-        path_key = "_".join([str(p) for p in path])
+        # Check if this is a final node (at max depth)
+        is_final_node = depth == self.max_depth - 1
         
-        if path_key in self.custom_prompts:
-            prompt_template = self.custom_prompts[path_key]
-        else:
-            prompt_template = self.default_prompt
-            
-        # Format the prompt with the topic and branch count
-        return prompt_template.format(
+        # If this is a final node and we have a final node prompt and business description
+        if is_final_node and self.final_node_prompt and self.business_description:
+            prompt = self.final_node_prompt.format(
+                topic=branch_text,
+                count=self.branch_counts[depth],
+                business_description=self.business_description
+            )
+            return prompt
+        
+        # Check if we have a custom prompt for this path
+        path_tuple = tuple(path)
+        if path_tuple in self.custom_prompts:
+            return self.custom_prompts[path_tuple].format(
+                topic=branch_text,
+                count=self.branch_counts[depth]
+            )
+        
+        # Otherwise use the default prompt
+        return self.default_prompt.format(
             topic=branch_text,
             count=self.branch_counts[depth]
         )
