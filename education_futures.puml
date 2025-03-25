@@ -1,0 +1,33 @@
+@startmindmap
+skinparam monochrome true
+skinparam defaultTextAlignment center
+skinparam wrapWidth 200
+skinparam backgroundColor white
+
+* The consequences of the closure of the US Department of Education and the devolution of education policy to the control of US States and School Boards.
+** Increased educational inequality among states and communities.
+*** Reduced economic mobility for lower-income families
+*** Increased social unrest and community fragmentation
+*** Widening digital divide in education access
+*** Strain on public health resources and services
+** Variability in curriculum quality and standards across regions.
+*** Increased educational inequality among students in different regions.
+*** Variation in workforce readiness impacting local economies.
+*** Barriers to student mobility between regions for education.
+*** Technological divides exacerbated by uneven curriculum quality.
+** Rise in grassroots educational innovations and local solutions.
+*** Enhanced community engagement and empowerment
+*** Increased local job opportunities in educational sectors
+*** Emergence of digital platforms for knowledge sharing
+*** Strengthened networks among local educators and innovators
+** Potential decrease in federal funding for education initiatives.
+*** Increased class sizes due to fewer teaching positions
+*** Greater reliance on technology for remote learning solutions
+*** Decline in educational resources and materials availability
+*** Widening educational inequality among socio-economic groups
+** Shifts in teacher workforce mobility and employment conditions.
+*** Increased teacher shortages in high-demand areas
+*** Greater reliance on remote teaching technologies
+*** Changes in education funding models and allocations
+*** Shift in community engagement and parent involvement
+@endmindmap

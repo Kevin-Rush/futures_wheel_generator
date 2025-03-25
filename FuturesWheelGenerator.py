@@ -1,0 +1,336 @@
+import os
+import json
+import time
+from openai import OpenAI
+from typing import List, Dict, Any, Optional, Callable
+import textwrap
+from colorama import init, Fore, Style
+
+# Initialize colorama for cross-platform colored terminal output
+init()
+
+class FuturesWheelGenerator:
+    def __init__(self, 
+                 branch_counts: List[int] = [4, 3, 2, 1],
+                 interactive: bool = False,
+                 delay_seconds: int = 0):
+        """
+        Initialize the Futures Wheel Generator.
+        
+        Args:
+            branch_counts: Number of branches to generate at each depth level
+            interactive: If True, prompt user for confirmation at each step
+            delay_seconds: Delay between API calls (to avoid rate limits)
+        """
+        self.branch_counts = branch_counts
+        self.max_depth = len(branch_counts)
+        self.interactive = interactive
+        self.delay_seconds = delay_seconds
+        self.custom_prompts = {}  # Store custom prompts for specific paths
+        self.default_prompt = """
+        For the topic "{topic}", identify {count} potential impacts or consequences.
+        Provide only the impacts as a JSON array of strings. Each impact should be concise (10 words or less).
+        """
+        
+    def generate_wheel(self, central_topic: str) -> Dict[str, Any]:
+        """
+        Generate a complete futures wheel for the given central topic.
+        
+        Args:
+            central_topic: The central topic/event to explore
+            
+        Returns:
+            A dictionary representing the futures wheel
+        """
+        print(f"Generating futures wheel for: {central_topic}")
+        
+        # Create the root node
+        wheel = {
+            "topic": central_topic,
+            "impacts": [],
+            "path": [],  # Empty path for root
+            "branch_text": central_topic  # Track the full branch text
+        }
+        
+        # Generate the wheel recursively
+        self._generate_impacts(wheel, depth=0)
+        
+        # Remove path keys before returning (they were just for internal use)
+        self._clean_wheel(wheel)
+        
+        return wheel
+    
+    def _clean_wheel(self, node: Dict[str, Any]) -> None:
+        """Remove internal path tracking from the wheel before output"""
+        if "path" in node:
+            del node["path"]
+        if "branch_text" in node:
+            del node["branch_text"]
+        
+        for impact in node.get("impacts", []):
+            self._clean_wheel(impact)
+    
+    def set_custom_prompt(self, path: List[int], prompt_template: str) -> None:
+        """
+        Set a custom prompt template for a specific path in the wheel.
+        
+        Args:
+            path: List of indices representing the path (e.g., [0, 1] means 
+                 first branch from root, then second branch from that)
+            prompt_template: Custom prompt template with {topic} placeholder
+        """
+        path_key = "_".join([str(p) for p in path])
+        self.custom_prompts[path_key] = prompt_template
+    
+    def set_default_prompt(self, prompt_template: str) -> None:
+        """
+        Set the default prompt template to use for paths without a custom prompt.
+        
+        Args:
+            prompt_template: Custom prompt template with {topic} and {count} placeholders
+        """
+        self.default_prompt = prompt_template
+    
+    def _get_prompt_for_path(self, path: List[int], depth: int, branch_text: str) -> str:
+        """
+        Get the appropriate prompt template for this path, or use default.
+        
+        Args:
+            path: Current path in the tree
+            depth: Current depth in the recursion
+            branch_text: The full branch text to generate impacts for
+            
+        Returns:
+            Formatted prompt string
+        """
+        # Check if we have a custom prompt for this path
+        path_key = "_".join([str(p) for p in path])
+        
+        if path_key in self.custom_prompts:
+            prompt_template = self.custom_prompts[path_key]
+        else:
+            prompt_template = self.default_prompt
+            
+        # Format the prompt with the topic and branch count
+        return prompt_template.format(
+            topic=branch_text,
+            count=self.branch_counts[depth]
+        )
+    
+    def _generate_impacts(self, node: Dict[str, Any], depth: int) -> None:
+        """
+        Recursively generate impacts for a node in the futures wheel.
+        
+        Args:
+            node: The current node to generate impacts for
+            depth: Current depth in the recursion
+        """
+        # Base case: stop recursion if we've reached max depth
+        if depth >= self.max_depth:
+            return
+        
+        # Get the current path and branch text
+        current_path = node.get("path", [])
+        branch_text = node.get("branch_text", node["topic"])
+        
+        # If interactive mode, ask for confirmation
+        if self.interactive:
+            print(f"\nCurrent topic: {node['topic']}")
+            print(f"Depth: {depth}, Path: {current_path}")
+            proceed = input("Generate impacts for this topic? (y/n): ").lower().strip()
+            if proceed != 'y':
+                print("Skipping this branch")
+                return
+        
+        # Generate impacts using OpenAI
+        impacts = self._get_impacts_from_openai(branch_text, depth, current_path)
+        
+        # Add impacts to the current node
+        for i, impact in enumerate(impacts):
+            # Create new path for this impact
+            new_path = current_path + [i]
+            
+            # Create new branch text that includes the entire branch history
+            new_branch_text = f"{branch_text} -> {impact}"
+            
+            impact_node = {
+                "topic": impact,
+                "impacts": [],
+                "path": new_path,
+                "branch_text": new_branch_text
+            }
+            node["impacts"].append(impact_node)
+            
+            # Show progress
+            indent = "  " * (depth + 1)
+            print(f"{indent}Processing: {impact} (Path: {new_path})")
+            
+            # Add delay to avoid rate limits if specified
+            if self.delay_seconds > 0:
+                time.sleep(self.delay_seconds)
+            
+            # Recursively generate impacts for this new node
+            self._generate_impacts(impact_node, depth + 1)
+    
+    def _get_impacts_from_openai(self, branch_text: str, depth: int, path: List[int]) -> List[str]:
+        """
+        Use OpenAI to generate impacts for a given topic.
+        
+        Args:
+            branch_text: The full branch text to generate impacts for
+            depth: Current depth in the recursion
+            path: Current path in the tree
+            
+        Returns:
+            List of impact statements
+        """
+        # Get the appropriate prompt for this path and depth
+        prompt = self._get_prompt_for_path(path, depth, branch_text)
+        
+        # Display the prompt in a visually appealing way
+        self._display_prompt(prompt, path, depth)
+        
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "You are a futures thinking expert."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        # Extract and return the impacts
+        try:
+            content = response.choices[0].message.content
+            impacts_data = json.loads(content)
+            impacts = impacts_data.get("impacts", [])
+            
+            # Ensure we get exactly the number of impacts we want
+            branch_count = self.branch_counts[depth]
+            if len(impacts) > branch_count:
+                impacts = impacts[:branch_count]
+            elif len(impacts) < branch_count:
+                # Pad with placeholder impacts if we didn't get enough
+                impacts.extend([f"Impact {i+1} for {branch_text}" for i in range(len(impacts), branch_count)])
+                
+            return impacts
+        except (json.JSONDecodeError, KeyError, AttributeError) as e:
+            print(f"Error parsing OpenAI response: {e}")
+            print(f"Response content: {response.choices[0].message.content}")
+            # Return placeholder impacts on error
+            return [f"Error generating impact {i+1}" for i in range(self.branch_counts[depth])]
+
+    def _display_prompt(self, prompt: str, path: List[int], depth: int) -> None:
+        """
+        Display the prompt in a visually appealing way in the terminal.
+        
+        Args:
+            prompt: The prompt to display
+            path: The current path in the tree
+            depth: The current depth in the recursion
+        """
+        # Terminal width (adjust if needed)
+        term_width = 100
+        
+        # Create a border with the path information
+        path_str = " -> ".join([str(p) for p in path])
+        header = f" Prompt for Path: [{path_str}] | Depth: {depth} "
+        padding = "=" * ((term_width - len(header)) // 2)
+        border = f"\n{Fore.CYAN}{padding}{header}{padding}{Style.RESET_ALL}\n"
+        
+        # Preserve original line breaks and wrap each line individually
+        formatted_lines = []
+        for line in prompt.split('\n'):
+            # Skip empty lines
+            if not line.strip():
+                formatted_lines.append("")
+                continue
+                
+            # Wrap this line if it's too long
+            if len(line) > term_width - 4:
+                wrapped = textwrap.fill(line.strip(), width=term_width - 4)
+                for wrapped_line in wrapped.split('\n'):
+                    formatted_lines.append(f"  {wrapped_line}")
+            else:
+                formatted_lines.append(f"  {line.strip()}")
+        
+        # Join the formatted lines
+        indented_text = "\n".join(formatted_lines)
+        
+        # Add a footer
+        footer = f"{Fore.CYAN}{'=' * term_width}{Style.RESET_ALL}\n"
+        
+        # Print the formatted prompt
+        print(border)
+        print(f"{Fore.YELLOW}{indented_text}{Style.RESET_ALL}")
+        print(footer)
+
+    def save_wheel(self, wheel: Dict[str, Any], filename: str) -> None:
+        """
+        Save the futures wheel to a PlantUML file.
+        
+        Args:
+            wheel: The futures wheel dictionary
+            filename: Output filename (will be changed to .puml extension)
+        """
+        # Ensure .puml extension
+        if not filename.endswith('.puml'):
+            filename = filename.split('.')[0] + '.puml'
+            
+        # Generate PlantUML content
+        puml_content = self._generate_plantuml(wheel)
+        
+        # Save to file
+        with open(filename, 'w') as f:
+            f.write(puml_content)
+            
+        print(f"Futures wheel saved to {filename}")
+        print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
+    
+    def _generate_plantuml(self, wheel: Dict[str, Any]) -> str:
+        """
+        Generate PlantUML mindmap notation for the futures wheel.
+        
+        Args:
+            wheel: The futures wheel dictionary
+            
+        Returns:
+            PlantUML mindmap notation as a string
+        """
+        puml_lines = [
+            "@startmindmap",
+            "skinparam monochrome true",
+            "skinparam defaultTextAlignment center",
+            "skinparam wrapWidth 200",
+            "skinparam backgroundColor white",
+            "",
+            f"* {wheel['topic']}",
+        ]
+        
+        # Add impacts recursively
+        self._add_impacts_to_plantuml(wheel.get("impacts", []), puml_lines, 1)
+        
+        puml_lines.append("@endmindmap")
+        
+        return "\n".join(puml_lines)
+    
+    def _add_impacts_to_plantuml(self, impacts: List[Dict[str, Any]], puml_lines: List[str], level: int) -> None:
+        """
+        Recursively add impacts to the PlantUML mindmap.
+        
+        Args:
+            impacts: List of impact nodes
+            puml_lines: List of PlantUML lines to append to
+            level: Current depth level
+        """
+        for impact in impacts:
+            # Add the current impact with proper indentation
+            prefix = "*" * (level + 1)  # PlantUML uses * for depth
+            puml_lines.append(f"{prefix} {impact['topic']}")
+            
+            # Recursively add child impacts
+            self._add_impacts_to_plantuml(impact.get("impacts", []), puml_lines, level + 1)
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
