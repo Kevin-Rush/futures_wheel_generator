@@ -358,8 +358,8 @@ class FuturesWheelGenerator:
             f.write("skinparam wrapWidth 200\n")
             f.write("skinparam backgroundColor white\n\n")
             
-            # Root node (blue)
-            f.write(f"*[#3498db] {wheel['topic']}\n")
+            # Root node (uncolored)
+            f.write(f"* {wheel['topic']}\n")
             
             # Write impacts with colors based on level
             self._write_impacts(f, wheel["impacts"], 1)
@@ -383,11 +383,13 @@ class FuturesWheelGenerator:
             # Determine color based on level
             color_code = ""
             if level == 1:
-                color_code = "[#2ecc71]"  # Green for level 1
+                color_code = "[#00bcd4]"  # Cyan for level 1
             elif level == 2:
-                color_code = "[#f1c40f]"  # Yellow for level 2
+                color_code = "[#2ecc71]"  # Green for level 2
             elif level == 3:
-                color_code = "[#e74c3c]"  # Red for level 3
+                color_code = "[#f1c40f]"  # Yellow for level 3
+            elif level == 4:
+                color_code = "[#e74c3c]"  # Red for level 4
             
             # Write the impact with proper indentation and color
             file.write(f"{'  ' * level}*{color_code} {impact['topic']}\n")
