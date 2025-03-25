@@ -1,15 +1,36 @@
-import os
 from FuturesWheelGenerator import FuturesWheelGenerator
+import argparse
+import os
 
 def main():
-    # Set the topic
-    topic = "The closure of the US Department of Education and the devolution of education policy to the control of US States and School Boards."
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Generate a futures wheel for education policy using the STEEPV framework')
+    parser.add_argument('--topic', type=str, 
+                        default="The closure of the US Department of Education and the devolution of education policy to the control of US States and School Boards.",
+                        help='Central topic for the futures wheel')
+    parser.add_argument('--interactive', action='store_true', 
+                        help='Enable interactive mode to confirm each branch generation')
+    parser.add_argument('--delay', type=int, default=1,
+                        help='Delay in seconds between API calls (to avoid rate limits)')
+    parser.add_argument('--output', type=str, default='education_futures_steepv',
+                        help='Output filename prefix (without extension)')
+    parser.add_argument('--type', type=str, choices=['neutral', 'positive', 'negative', 'long_shot'], 
+                        default='neutral',
+                        help='Type of futures wheel to generate (neutral, positive, negative, or long_shot)')
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Set filename based on wheel type
+    output_file = f"{args.output}_{args.type}" if args.type != 'neutral' else args.output
     
     # Create generator with specific configuration - now with 6 primary branches for STEEPV
     generator = FuturesWheelGenerator(
         branch_counts=[6, 3, 2, 1],  # 6→3→2→1 branching pattern 
-        interactive=False,           # Non-interactive mode
-        delay_seconds=1              # 1 second delay between API calls
+        interactive=args.interactive,  
+        delay_seconds=args.delay,
+        wheel_type=args.type,
+        temperature=1.0 if args.type == 'long_shot' else 0.7
     )
     
     # Set custom prompts for specific branches to focus on different aspects - STEEPV framework
@@ -32,52 +53,52 @@ def main():
     generator.set_custom_prompt([2], """
     For the topic "{topic}", identify 3 potential ECONOMIC impacts or consequences.
     Focus on financial aspects, market changes, economic inequality, level & distribution of economic growth,
-    industrial structures, and markets & financial issues.
+    industrial structures, markets & financial issues.
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
     
     generator.set_custom_prompt([3], """
     For the topic "{topic}", identify 3 potential ENVIRONMENTAL impacts or consequences.
-    Focus on sustainability, climate change, localized environmental issues, 
-    resource usage, and ecological impacts of education policy changes.
+    Focus on sustainability, climate change, localized environmental issues, resource usage, ecological impacts.
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
     
     generator.set_custom_prompt([4], """
     For the topic "{topic}", identify 3 potential POLITICAL impacts or consequences.
     Focus on governance, policy changes, political movements, dominant political viewpoints,
-    regulation, and lobbying related to education.
+    regulation, lobbying.
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
     
     generator.set_custom_prompt([5], """
     For the topic "{topic}", identify 3 potential VALUES impacts or consequences.
     Focus on attitudes to working life, preferences for leisure, culture, social relations,
-    deference to authority, and changing value systems in education.
+    deference to authority, changing value systems.
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
     
-    # Set a default prompt for all subsequent branches that focuses on continuing the train of thought
+    # Set default prompt for all other branches - focus on continuing the train of thought
     generator.set_default_prompt("""
-    Consider this chain of consequences of: {topic}
+    Continue the train of thought for this branch: "{topic}"
     
-    Based on this progression of impacts, identify {count} logical next-order consequences or effects 
-    that would naturally follow from this chain of events.
-    
-    Think about how each previous impact builds upon the others and what further effects might emerge.
-    Ensure your response follows logically from the entire chain, not just the most recent impact.
+    Consider the entire chain of consequences shown above, not just the most recent impact.
+    Identify {count} logical next-order impacts or consequences that would follow.
     
     Provide only the impacts as a JSON array of strings. Each impact should be concise (20 words or less).
     """)
     
-    # Generate wheel
-    print(f"Generating custom futures wheel using STEEPV framework for: {topic}")
-    wheel = generator.generate_wheel(topic)
+    print(f"Generating {args.type} futures wheel using STEEPV framework for topic:")
+    print(f'"{args.topic}"')
+    print()
     
-    # Save the wheel
-    generator.save_wheel(wheel, "education_futures_steepv.puml")
+    # Generate the wheel
+    wheel = generator.generate_wheel(args.topic)
     
-    print("STEEPV futures wheel generation complete!")
+    # Save to PlantUML file
+    generator.save_wheel(wheel, output_file)
+    
+    print(f"\nFutures wheel saved to {output_file}.puml")
+    print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,9 @@ class FuturesWheelGenerator:
     def __init__(self, 
                  branch_counts: List[int] = [4, 3, 2, 1],
                  interactive: bool = False,
-                 delay_seconds: int = 0):
+                 delay_seconds: int = 0,
+                 wheel_type: str = "neutral",
+                 temperature: float = 0.7):
         """
         Initialize the Futures Wheel Generator.
         
@@ -21,6 +23,8 @@ class FuturesWheelGenerator:
             branch_counts: Number of branches to generate at each depth level
             interactive: If True, prompt user for confirmation at each step
             delay_seconds: Delay between API calls (to avoid rate limits)
+            wheel_type: Type of futures wheel to generate - "neutral", "positive", "negative", or "long_shot"
+            temperature: Temperature setting for OpenAI API (higher = more creative/random)
         """
         self.branch_counts = branch_counts
         self.max_depth = len(branch_counts)
@@ -31,6 +35,13 @@ class FuturesWheelGenerator:
         For the topic "{topic}", identify {count} potential impacts or consequences.
         Provide only the impacts as a JSON array of strings. Each impact should be concise (10 words or less).
         """
+        
+        # Set wheel type and corresponding temperature
+        self.wheel_type = wheel_type.lower()
+        if self.wheel_type == "long_shot":
+            self.temperature = 1.0  # Higher temperature for more creative/unusual outcomes
+        else:
+            self.temperature = temperature
         
     def generate_wheel(self, central_topic: str) -> Dict[str, Any]:
         """
@@ -187,6 +198,17 @@ class FuturesWheelGenerator:
         # Get the appropriate prompt for this path and depth
         prompt = self._get_prompt_for_path(path, depth, branch_text)
         
+        # Add wheel type instructions to the prompt
+        if self.wheel_type == "positive":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential POSITIVE impacts or consequences (benefits, opportunities, advantages)")
+        elif self.wheel_type == "negative":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential NEGATIVE impacts or consequences (risks, challenges, disadvantages)")
+        elif self.wheel_type == "long_shot":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential UNUSUAL or SURPRISING impacts or consequences (low-probability but high-impact)")
+        
         # Display the prompt in a visually appealing way
         self._display_prompt(prompt, path, depth)
         
@@ -194,6 +216,7 @@ class FuturesWheelGenerator:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             response_format={"type": "json_object"},
+            temperature=self.temperature,
             messages=[
                 {"role": "system", "content": "You are a futures thinking expert."},
                 {"role": "user", "content": prompt}

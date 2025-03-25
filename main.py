@@ -13,6 +13,11 @@ def main():
                         help='Delay in seconds between API calls (to avoid rate limits)')
     parser.add_argument('--output', type=str, default='futures_wheel.puml', 
                         help='Output filename (PlantUML format)')
+    parser.add_argument('--type', type=str, choices=['neutral', 'positive', 'negative', 'long_shot'], 
+                        default='neutral',
+                        help='Type of futures wheel to generate (neutral, positive, negative, or long_shot)')
+    parser.add_argument('--temperature', type=float, default=0.7,
+                        help='Temperature setting for OpenAI API (higher = more creative/random)')
     
     # Parse arguments
     args = parser.parse_args()
@@ -24,21 +29,21 @@ def main():
     generator = FuturesWheelGenerator(
         branch_counts=branch_counts,
         interactive=args.interactive,
-        delay_seconds=args.delay
+        delay_seconds=args.delay,
+        wheel_type=args.type,
+        temperature=args.temperature
     )
     
-    # Example of setting custom prompts for specific paths
-    # Uncomment and modify these lines to customize prompts for specific branches
-    # generator.set_custom_prompt([0], "For {topic}, what are the most disruptive technological impacts?")
-    # generator.set_custom_prompt([0, 1], "For {topic}, what are the most significant economic consequences?")
+    print(f"Generating {args.type} futures wheel for: {args.topic}")
     
-    # Generate wheel
+    # Generate the wheel
     wheel = generator.generate_wheel(args.topic)
     
-    # Save the wheel
+    # Save to PlantUML file
     generator.save_wheel(wheel, args.output)
     
-    print("Futures wheel generation complete!")
+    print(f"Futures wheel saved to {args.output}.puml")
+    print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
 
 if __name__ == "__main__":
     main()
