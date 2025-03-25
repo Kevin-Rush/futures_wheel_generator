@@ -137,44 +137,6 @@ class FuturesWheelGenerator:
             print(f"Created template file at {file_path}")
             self.business_description = ""
     
-    def _get_prompt_for_path(self, path: List[int], depth: int, branch_text: str) -> str:
-        """
-        Get the appropriate prompt for the given path and depth.
-        
-        Args:
-            path: Current path in the tree
-            depth: Current depth in the recursion
-            branch_text: The full branch text to generate impacts for
-            
-        Returns:
-            Prompt string
-        """
-        # Check if this is a final node (at max depth)
-        is_final_node = depth == self.max_depth - 1
-        
-        # If this is a final node and we have a final node prompt and business description
-        if is_final_node and self.final_node_prompt and self.business_description:
-            prompt = self.final_node_prompt.format(
-                topic=branch_text,
-                count=self.branch_counts[depth],
-                business_description=self.business_description
-            )
-            return prompt
-        
-        # Check if we have a custom prompt for this path
-        path_tuple = tuple(path)
-        if path_tuple in self.custom_prompts:
-            return self.custom_prompts[path_tuple].format(
-                topic=branch_text,
-                count=self.branch_counts[depth]
-            )
-        
-        # Otherwise use the default prompt
-        return self.default_prompt.format(
-            topic=branch_text,
-            count=self.branch_counts[depth]
-        )
-    
     def _generate_impacts(self, node: Dict[str, Any], depth: int) -> None:
         """
         Recursively generate impacts for a node in the futures wheel.
@@ -242,19 +204,8 @@ class FuturesWheelGenerator:
         Returns:
             List of impact statements
         """
-        # Get the appropriate prompt for this path and depth
+        # Get the appropriate prompt for this path and depth, with wheel type applied
         prompt = self._get_prompt_for_path(path, depth, branch_text)
-        
-        # Add wheel type instructions to the prompt
-        if self.wheel_type == "positive":
-            prompt = prompt.replace("potential impacts or consequences", 
-                                   "potential POSITIVE impacts or consequences (benefits, opportunities, advantages)")
-        elif self.wheel_type == "negative":
-            prompt = prompt.replace("potential impacts or consequences", 
-                                   "potential NEGATIVE impacts or consequences (risks, challenges, disadvantages)")
-        elif self.wheel_type == "long_shot":
-            prompt = prompt.replace("potential impacts or consequences", 
-                                   "potential UNUSUAL or SURPRISING impacts or consequences (low-probability but high-impact)")
         
         # Display the prompt in a visually appealing way
         self._display_prompt(prompt, path, depth)
@@ -291,6 +242,59 @@ class FuturesWheelGenerator:
             # Return placeholder impacts on error
             return [f"Error generating impact {i+1}" for i in range(self.branch_counts[depth])]
 
+    def _get_prompt_for_path(self, path: List[int], depth: int, branch_text: str) -> str:
+        """
+        Get the appropriate prompt for the given path and depth, with wheel type applied.
+        
+        Args:
+            path: Current path in the tree
+            depth: Current depth in the recursion
+            branch_text: The full branch text to generate impacts for
+            
+        Returns:
+            Prompt string
+        """
+        # Check if this is a final node (at max depth)
+        is_final_node = depth == self.max_depth - 1
+        
+        # Start with the appropriate base prompt
+        prompt = ""
+        
+        # If this is a final node and we have a final node prompt and business description
+        if is_final_node and self.final_node_prompt and self.business_description:
+            prompt = self.final_node_prompt.format(
+                topic=branch_text,
+                count=self.branch_counts[depth],
+                business_description=self.business_description
+            )
+        else:
+            # Check if we have a custom prompt for this path
+            path_tuple = tuple(path)
+            if path_tuple in self.custom_prompts:
+                prompt = self.custom_prompts[path_tuple].format(
+                    topic=branch_text,
+                    count=self.branch_counts[depth]
+                )
+            else:
+                # Otherwise use the default prompt
+                prompt = self.default_prompt.format(
+                    topic=branch_text,
+                    count=self.branch_counts[depth]
+                )
+        
+        # Apply wheel type modifications to the prompt
+        if self.wheel_type == "positive":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential POSITIVE impacts or consequences (benefits, opportunities, advantages)")
+        elif self.wheel_type == "negative":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential NEGATIVE impacts or consequences (risks, challenges, disadvantages)")
+        elif self.wheel_type == "long_shot":
+            prompt = prompt.replace("potential impacts or consequences", 
+                                   "potential UNUSUAL or SURPRISING impacts or consequences (low-probability but high-impact)")
+        
+        return prompt
+    
     def _display_prompt(self, prompt: str, path: List[int], depth: int) -> None:
         """
         Display the prompt in a visually appealing way in the terminal.
