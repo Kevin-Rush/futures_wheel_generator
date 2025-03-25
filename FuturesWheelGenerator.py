@@ -338,69 +338,39 @@ class FuturesWheelGenerator:
 
     def save_wheel(self, wheel: Dict[str, Any], filename: str) -> None:
         """
-        Save the futures wheel to a PlantUML file.
+        Save the wheel to a PlantUML file.
         
         Args:
-            wheel: The futures wheel dictionary
-            filename: Output filename (will be changed to .puml extension)
+            wheel: The wheel data structure
+            filename: The filename to save to (without extension)
         """
-        # Ensure .puml extension
-        if not filename.endswith('.puml'):
-            filename = filename.split('.')[0] + '.puml'
-            
-        # Generate PlantUML content
-        puml_content = self._generate_plantuml(wheel)
+        # Ensure the files directory exists
+        os.makedirs("files", exist_ok=True)
         
-        # Save to file
-        with open(filename, 'w') as f:
-            f.write(puml_content)
-            
-        print(f"Futures wheel saved to {filename}")
-        print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
-    
-    def _generate_plantuml(self, wheel: Dict[str, Any]) -> str:
-        """
-        Generate PlantUML mindmap notation for the futures wheel.
+        # Construct the full path
+        if not filename.startswith("files/") and not filename.startswith("files\\"):
+            filename = os.path.join("files", filename)
         
-        Args:
-            wheel: The futures wheel dictionary
-            
-        Returns:
-            PlantUML mindmap notation as a string
-        """
-        puml_lines = [
-            "@startmindmap",
-            "skinparam monochrome true",
-            "skinparam defaultTextAlignment center",
-            "skinparam wrapWidth 200",
-            "skinparam backgroundColor white",
-            "",
-            f"* {wheel['topic']}",
-        ]
+        # Save as PlantUML
+        with open(f"{filename}.puml", "w", encoding="utf-8") as f:
+            f.write("@startmindmap\n")
+            f.write("skinparam monochrome true\n")
+            f.write("skinparam defaultTextAlignment center\n")
+            f.write("skinparam wrapWidth 200\n")
+            f.write("skinparam backgroundColor white\n\n")
+            f.write(f"* {wheel['topic']}\n")
+            self._write_impacts(f, wheel["impacts"], 1)
+            f.write("@endmindmap\n")
         
-        # Add impacts recursively
-        self._add_impacts_to_plantuml(wheel.get("impacts", []), puml_lines, 1)
-        
-        puml_lines.append("@endmindmap")
-        
-        return "\n".join(puml_lines)
-    
-    def _add_impacts_to_plantuml(self, impacts: List[Dict[str, Any]], puml_lines: List[str], level: int) -> None:
-        """
-        Recursively add impacts to the PlantUML mindmap.
-        
-        Args:
-            impacts: List of impact nodes
-            puml_lines: List of PlantUML lines to append to
-            level: Current depth level
-        """
+        # Save as JSON
+        with open(f"{filename}.json", "w", encoding="utf-8") as f:
+            json.dump(wheel, f, indent=2)
+
+    def _write_impacts(self, file, impacts, level):
         for impact in impacts:
-            # Add the current impact with proper indentation
-            prefix = "*" * (level + 1)  # PlantUML uses * for depth
-            puml_lines.append(f"{prefix} {impact['topic']}")
-            
-            # Recursively add child impacts
-            self._add_impacts_to_plantuml(impact.get("impacts", []), puml_lines, level + 1)
+            file.write(f"{'  ' * level}* {impact['topic']}\n")
+            if impact.get("impacts"):
+                self._write_impacts(file, impact["impacts"], level + 1)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))

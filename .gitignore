@@ -38,8 +38,14 @@ Thumbs.db
 # OpenAI API key file (if you use one)
 .env
 
-# Generated PlantUML files (optional, comment out if you want to include these)
-# *.puml
+# Ignore generated files
+*.puml
+*.json
 
-# Business description file (private)
+# Ignore business description file
 business_description.txt
+files/business_description.txt
+
+# Ignore all generated files in the files directory
+files/*
+!files/.gitkeep

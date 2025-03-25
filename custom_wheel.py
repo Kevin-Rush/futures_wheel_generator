@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--type', type=str, choices=['neutral', 'positive', 'negative', 'long_shot'], 
                         default='neutral',
                         help='Type of futures wheel to generate (neutral, positive, negative, or long_shot)')
-    parser.add_argument('--business', type=str, default='business_description.txt',
+    parser.add_argument('--business', type=str, default='files/business_description.txt',
                         help='Path to business description file for business relevance in final nodes')
     parser.add_argument('--no-business', action='store_true',
                         help='Disable business relevance even if business description file exists')

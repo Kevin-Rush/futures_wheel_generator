@@ -6,7 +6,7 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Generate a futures wheel for education policy using the STEEPV framework')
     parser.add_argument('--topic', type=str, 
-                        default="The closure of the US Department of Education and the devolution of education policy to the control of US States and School Boards.",
+                        default="Advancements in AI",
                         help='Central topic for the futures wheel')
     parser.add_argument('--interactive', action='store_true', 
                         help='Enable interactive mode to confirm each branch generation')
@@ -30,7 +30,7 @@ def main():
         interactive=args.interactive,  
         delay_seconds=args.delay,
         wheel_type=args.type,
-        temperature=1.0 if args.type == 'long_shot' else 0.7
+        temperature=0.9 if args.type == 'long_shot' else 0.4
     )
     
     # Set custom prompts for specific branches to focus on different aspects - STEEPV framework
