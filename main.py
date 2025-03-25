@@ -40,9 +40,12 @@ def main():
     wheel = generator.generate_wheel(args.topic)
     
     # Save to PlantUML file
-    generator.save_wheel(wheel, f"{args.output}.puml")
+    generator.save_wheel(wheel, args.output)
     
-    print(f"Futures wheel saved to {args.output}.puml")
+    # Get the output filename with extension
+    output_file = f"{args.output}.puml"
+    
+    print(f"\nFutures wheel saved to {output_file}")
     print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
 
 if __name__ == "__main__":

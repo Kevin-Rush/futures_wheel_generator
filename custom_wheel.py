@@ -122,7 +122,10 @@ def main():
     # Save to PlantUML file
     generator.save_wheel(wheel, output_file)
     
-    print(f"\nFutures wheel saved to {output_file}.puml")
+    # Get the output filename with extension
+    output_file_with_ext = f"{output_file}.puml"
+    
+    print(f"\nFutures wheel saved to files/{output_file_with_ext}")
     print("To view the diagram, use a PlantUML viewer or online service like http://www.plantuml.com/plantuml/")
 
 if __name__ == "__main__":
