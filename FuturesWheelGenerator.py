@@ -354,12 +354,16 @@ class FuturesWheelGenerator:
         # Save as PlantUML
         with open(f"{filename}.puml", "w", encoding="utf-8") as f:
             f.write("@startmindmap\n")
-            f.write("skinparam monochrome true\n")
             f.write("skinparam defaultTextAlignment center\n")
             f.write("skinparam wrapWidth 200\n")
             f.write("skinparam backgroundColor white\n\n")
-            f.write(f"* {wheel['topic']}\n")
+            
+            # Root node (blue)
+            f.write(f"*[#3498db] {wheel['topic']}\n")
+            
+            # Write impacts with colors based on level
             self._write_impacts(f, wheel["impacts"], 1)
+            
             f.write("@endmindmap\n")
         
         # Save as JSON
@@ -367,8 +371,28 @@ class FuturesWheelGenerator:
             json.dump(wheel, f, indent=2)
 
     def _write_impacts(self, file, impacts, level):
+        """
+        Recursively write impacts to the PlantUML file with colors based on level.
+        
+        Args:
+            file: The file to write to
+            impacts: The impacts to write
+            level: The current level (depth) in the tree
+        """
         for impact in impacts:
-            file.write(f"{'  ' * level}* {impact['topic']}\n")
+            # Determine color based on level
+            color_code = ""
+            if level == 1:
+                color_code = "[#2ecc71]"  # Green for level 1
+            elif level == 2:
+                color_code = "[#f1c40f]"  # Yellow for level 2
+            elif level == 3:
+                color_code = "[#e74c3c]"  # Red for level 3
+            
+            # Write the impact with proper indentation and color
+            file.write(f"{'  ' * level}*{color_code} {impact['topic']}\n")
+            
+            # Recursively write child impacts
             if impact.get("impacts"):
                 self._write_impacts(file, impact["impacts"], level + 1)
 
